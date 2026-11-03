@@ -1,0 +1,2696 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<title>Proyecto 2a — BDAutos MongoDB</title>
+<style>
+  body { font-family: Georgia, 'Times New Roman', serif; margin: 2rem auto; max-width: 960px; color: #1a1a1a; line-height: 1.45; }
+  h1, h2, h3 { font-family: 'Helvetica Neue', Arial, sans-serif; }
+  .meta { color: #444; margin-bottom: 2rem; }
+  pre { background: #f4f4f4; border: 1px solid #ddd; padding: 0.75rem; overflow-x: auto; font-size: 0.85rem; }
+  .query { page-break-inside: avoid; margin-bottom: 2rem; border-top: 1px solid #ccc; padding-top: 1rem; }
+  code { font-family: Menlo, Consolas, monospace; }
+  ul { padding-left: 1.2rem; }
+</style>
+</head>
+<body>
+<h1>Proyecto 2a. Evaluación — BDAutos en MongoDB</h1>
+<div class='meta'><p><strong>Universidad Autónoma de Chihuahua</strong> — Bases de Datos Avanzado</p><p>Generado: 2026-11-02 14:00</p><p>Base: <code>bdautos</code> — colecciones: continents, countries, makers, cars</p></div>
+<h2>1. Objetivo</h2>
+<p>Aplicar Aggregation Framework: diseñar BD Autos con embedding y linking, migrar desde el modelo relacional, resolver 25 consultas y exponerlas con una aplicación Python que muestra el código y el resultado.</p>
+<h2>2. Modelo documental</h2>
+<ul><li><strong>continents</strong>: catálogo (linking target).</li><li><strong>countries</strong>: linking <code>continentId</code> + snapshot embebido.</li><li><strong>makers</strong>: embedding de <code>models[]</code> + linking <code>countryId</code>.</li><li><strong>cars</strong>: embedding Names+Details + snapshots + linking makerId/modelId.</li></ul><p>Detalle en <code>docs/01_modelo_y_migracion.md</code>.</p>
+<h2>3. Migración</h2>
+<p>Script <code>scripts/migrate.py</code> parsea <code>data/BDAutosU2.sql</code> e inserta documentos. Conteos esperados: 5 / 17 / 20 / 42 modelos / 138 autos.</p>
+<pre>{
+  &quot;continents&quot;: 5,
+  &quot;countries&quot;: 17,
+  &quot;makers&quot;: 20,
+  &quot;cars&quot;: 138
+}</pre>
+<h2>4. Consultas (código + resultado)</h2>
+<div class='query'>
+<h3>Consulta 1: Autos 2024+ con al menos 35 mpg</h3>
+<p>Obtener los autos de modelo 2024 en adelante con rendimiento de al menos 35 mpg. Mostrar solo descripción, año y rendimiento, ordenados de mayor a menor rendimiento.</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$match&quot;: {
+      &quot;year&quot;: {
+        &quot;$gte&quot;: 2024
+      },
+      &quot;mpg&quot;: {
+        &quot;$gte&quot;: 35
+      }
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;descr&quot;: 1,
+      &quot;year&quot;: 1,
+      &quot;mpg&quot;: 1
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;mpg&quot;: -1
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (18 documentos)</p>
+<pre>[
+  {
+    &quot;descr&quot;: &quot;toyota camry le hybrid 2.5&quot;,
+    &quot;mpg&quot;: 51,
+    &quot;year&quot;: 2025
+  },
+  {
+    &quot;descr&quot;: &quot;toyota corolla hybrid le 1.8&quot;,
+    &quot;mpg&quot;: 50,
+    &quot;year&quot;: 2024
+  },
+  {
+    &quot;descr&quot;: &quot;lexus es 300h 2.5&quot;,
+    &quot;mpg&quot;: 44,
+    &quot;year&quot;: 2024
+  },
+  {
+    &quot;descr&quot;: &quot;honda accord hybrid touring 2.0&quot;,
+    &quot;mpg&quot;: 44,
+    &quot;year&quot;: 2024
+  },
+  {
+    &quot;descr&quot;: &quot;suzuki swift 1.2&quot;,
+    &quot;mpg&quot;: 44,
+    &quot;year&quot;: 2024
+  },
+  {
+    &quot;descr&quot;: &quot;peugeot 2008 gt 1.2t&quot;,
+    &quot;mpg&quot;: 40,
+    &quot;year&quot;: 2024
+  },
+  {
+    &quot;descr&quot;: &quot;toyota rav4 hybrid xle 2.5&quot;,
+    &quot;mpg&quot;: 40,
+    &quot;year&quot;: 2024
+  },
+  {
+    &quot;descr&quot;: &quot;renault kardian 1.0t&quot;,
+    &quot;mpg&quot;: 40,
+    &quot;year&quot;: 2025
+  },
+  {
+    &quot;descr&quot;: &quot;mitsubishi mirage g4 1.2&quot;,
+    &quot;mpg&quot;: 39,
+    &quot;year&quot;: 2024
+  },
+  {
+    &quot;descr&quot;: &quot;mg 5 1.5&quot;,
+    &quot;mpg&quot;: 38,
+    &quot;year&quot;: 2024
+  },
+  {
+    &quot;descr&quot;: &quot;ford maverick xlt hybrid 2.5&quot;,
+    &quot;mpg&quot;: 37,
+    &quot;year&quot;: 2024
+  },
+  {
+    &quot;descr&quot;: &quot;honda civic ex 1.5t&quot;,
+    &quot;mpg&quot;: 36,
+    &quot;year&quot;: 2024
+  },
+  {
+    &quot;descr&quot;: &quot;suzuki vitara 1.4t&quot;,
+    &quot;mpg&quot;: 36,
+    &quot;year&quot;: 2024
+  },
+  {
+    &quot;descr&quot;: &quot;hyundai elantra sel 2.0&quot;,
+    &quot;mpg&quot;: 36,
+    &quot;year&quot;: 2024
+  },
+  {
+    &quot;descr&quot;: &quot;toyota corolla le 2.0&quot;,
+    &quot;mpg&quot;: 35,
+    &quot;year&quot;: 2024
+  },
+  {
+    &quot;descr&quot;: &quot;nissan versa sr 1.6&quot;,
+    &quot;mpg&quot;: 35,
+    &quot;year&quot;: 2024
+  },
+  {
+    &quot;descr&quot;: &quot;hyundai creta 1.5&quot;,
+    &quot;mpg&quot;: 35,
+    &quot;year&quot;: 2024
+  },
+  {
+    &quot;descr&quot;: &quot;volkswagen jetta se 1.5t&quot;,
+    &quot;mpg&quot;: 35,
+    &quot;year&quot;: 2024
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 2: Europeos 4 cilindros &gt;= 250 hp</h3>
+<p>Listar los autos de fabricantes europeos con motor de 4 cilindros y al menos 250 hp, mostrando descripción, país y potencia, ordenados por potencia descendente.</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$match&quot;: {
+      &quot;continent.name&quot;: &quot;europe&quot;,
+      &quot;cylinders&quot;: 4,
+      &quot;horsepower&quot;: {
+        &quot;$gte&quot;: 250
+      }
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;descr&quot;: 1,
+      &quot;pais&quot;: &quot;$country.name&quot;,
+      &quot;horsepower&quot;: 1
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;horsepower&quot;: -1
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (13 documentos)</p>
+<pre>[
+  {
+    &quot;descr&quot;: &quot;volkswagen golf r 2.0t&quot;,
+    &quot;horsepower&quot;: 315,
+    &quot;pais&quot;: &quot;germany&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;volvo xc90 b6 2.0t&quot;,
+    &quot;horsepower&quot;: 295,
+    &quot;pais&quot;: &quot;sweden&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;alfa romeo giulia 2.0t&quot;,
+    &quot;horsepower&quot;: 280,
+    &quot;pais&quot;: &quot;netherlands&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;volkswagen atlas 2.0t&quot;,
+    &quot;horsepower&quot;: 269,
+    &quot;pais&quot;: &quot;germany&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;dodge hornet gt 2.0t&quot;,
+    &quot;horsepower&quot;: 268,
+    &quot;pais&quot;: &quot;netherlands&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;audi a4 45 tfsi 2.0t&quot;,
+    &quot;horsepower&quot;: 261,
+    &quot;pais&quot;: &quot;germany&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;audi q5 45 tfsi 2.0t&quot;,
+    &quot;horsepower&quot;: 261,
+    &quot;pais&quot;: &quot;germany&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;porsche macan t 2.0t&quot;,
+    &quot;horsepower&quot;: 261,
+    &quot;pais&quot;: &quot;germany&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;bmw 330i 2.0t&quot;,
+    &quot;horsepower&quot;: 255,
+    &quot;pais&quot;: &quot;germany&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;bmw x3 xdrive30i 2.0t&quot;,
+    &quot;horsepower&quot;: 255,
+    &quot;pais&quot;: &quot;germany&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;mercedes-benz c 300 2.0t&quot;,
+    &quot;horsepower&quot;: 255,
+    &quot;pais&quot;: &quot;germany&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;mercedes-benz e 350 2.0t&quot;,
+    &quot;horsepower&quot;: 255,
+    &quot;pais&quot;: &quot;germany&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;mercedes-benz glc 300 2.0t&quot;,
+    &quot;horsepower&quot;: 255,
+    &quot;pais&quot;: &quot;germany&quot;
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 3: Japoneses turbo (sufijo Nt)</h3>
+<p>Contar cuántos autos de fabricantes japoneses tienen motor turbo, es decir, cuya descripción termina con la cilindrada seguida de &#x27;t&#x27; (por ejemplo &#x27;1.5t&#x27;).</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$match&quot;: {
+      &quot;country.name&quot;: &quot;japan&quot;,
+      &quot;descr&quot;: {
+        &quot;$regex&quot;: &quot;\\d+(\\.\\d+)?t$&quot;,
+        &quot;$options&quot;: &quot;i&quot;
+      }
+    }
+  },
+  {
+    &quot;$count&quot;: &quot;japoneses_turbo&quot;
+  }
+]</pre>
+<p><strong>Resultado</strong> (1 documentos)</p>
+<pre>[
+  {
+    &quot;japoneses_turbo&quot;: 11
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 4: Ligeros/rápidos o V8 eficientes</h3>
+<p>Autos que pesen &lt; 3000 lb y aceleren &lt; 9 s, o tengan 8+ cilindros y rindan al menos 19 mpg.</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$match&quot;: {
+      &quot;$or&quot;: [
+        {
+          &quot;weight&quot;: {
+            &quot;$lt&quot;: 3000
+          },
+          &quot;accel&quot;: {
+            &quot;$lt&quot;: 9
+          }
+        },
+        {
+          &quot;cylinders&quot;: {
+            &quot;$gte&quot;: 8
+          },
+          &quot;mpg&quot;: {
+            &quot;$gte&quot;: 19
+          }
+        }
+      ]
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;descr&quot;: 1,
+      &quot;weight&quot;: 1,
+      &quot;accel&quot;: 1,
+      &quot;cylinders&quot;: 1,
+      &quot;mpg&quot;: 1
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (8 documentos)</p>
+<pre>[
+  {
+    &quot;descr&quot;: &quot;chevrolet corvette stingray 6.2&quot;,
+    &quot;mpg&quot;: 19,
+    &quot;cylinders&quot;: 8,
+    &quot;weight&quot;: 3650,
+    &quot;accel&quot;: 2.9
+  },
+  {
+    &quot;descr&quot;: &quot;chevrolet camaro ss 6.2&quot;,
+    &quot;mpg&quot;: 19,
+    &quot;cylinders&quot;: 8,
+    &quot;weight&quot;: 3685,
+    &quot;accel&quot;: 4
+  },
+  {
+    &quot;descr&quot;: &quot;peugeot 2008 gt 1.2t&quot;,
+    &quot;mpg&quot;: 40,
+    &quot;cylinders&quot;: 3,
+    &quot;weight&quot;: 2800,
+    &quot;accel&quot;: 8.7
+  },
+  {
+    &quot;descr&quot;: &quot;toyota gr86 2.4&quot;,
+    &quot;mpg&quot;: 22,
+    &quot;cylinders&quot;: 4,
+    &quot;weight&quot;: 2811,
+    &quot;accel&quot;: 6.1
+  },
+  {
+    &quot;descr&quot;: &quot;mazda mx-5 miata 2.0&quot;,
+    &quot;mpg&quot;: 30,
+    &quot;cylinders&quot;: 4,
+    &quot;weight&quot;: 2350,
+    &quot;accel&quot;: 5.7
+  },
+  {
+    &quot;descr&quot;: &quot;hyundai elantra sel 2.0&quot;,
+    &quot;mpg&quot;: 36,
+    &quot;cylinders&quot;: 4,
+    &quot;weight&quot;: 2900,
+    &quot;accel&quot;: 8.5
+  },
+  {
+    &quot;descr&quot;: &quot;kia forte lxs 2.0&quot;,
+    &quot;mpg&quot;: 34,
+    &quot;cylinders&quot;: 4,
+    &quot;weight&quot;: 2900,
+    &quot;accel&quot;: 8.6
+  },
+  {
+    &quot;descr&quot;: &quot;mini cooper s 2.0t&quot;,
+    &quot;mpg&quot;: 31,
+    &quot;cylinders&quot;: 4,
+    &quot;weight&quot;: 2900,
+    &quot;accel&quot;: 6.4
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 5: Fabricantes con más de una marca</h3>
+<p>Obtener los fabricantes que comercializan más de una marca o línea de modelo, mostrando nombre, país y modelos.</p>
+<p>Colección: <code>makers</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$match&quot;: {
+      &quot;$expr&quot;: {
+        &quot;$gt&quot;: [
+          {
+            &quot;$size&quot;: &quot;$models&quot;
+          },
+          1
+        ]
+      }
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;name&quot;: 1,
+      &quot;pais&quot;: &quot;$country.name&quot;,
+      &quot;modelos&quot;: &quot;$models.name&quot;
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;name&quot;: 1
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (11 documentos)</p>
+<pre>[
+  {
+    &quot;name&quot;: &quot;bmw&quot;,
+    &quot;pais&quot;: &quot;germany&quot;,
+    &quot;modelos&quot;: [
+      &quot;bmw&quot;,
+      &quot;mini&quot;
+    ]
+  },
+  {
+    &quot;name&quot;: &quot;ford&quot;,
+    &quot;pais&quot;: &quot;usa&quot;,
+    &quot;modelos&quot;: [
+      &quot;ford&quot;,
+      &quot;lincoln&quot;
+    ]
+  },
+  {
+    &quot;name&quot;: &quot;gm&quot;,
+    &quot;pais&quot;: &quot;usa&quot;,
+    &quot;modelos&quot;: [
+      &quot;chevrolet&quot;,
+      &quot;gmc&quot;,
+      &quot;cadillac&quot;,
+      &quot;buick&quot;
+    ]
+  },
+  {
+    &quot;name&quot;: &quot;honda&quot;,
+    &quot;pais&quot;: &quot;japan&quot;,
+    &quot;modelos&quot;: [
+      &quot;honda&quot;,
+      &quot;acura&quot;
+    ]
+  },
+  {
+    &quot;name&quot;: &quot;hyundai&quot;,
+    &quot;pais&quot;: &quot;korea&quot;,
+    &quot;modelos&quot;: [
+      &quot;hyundai&quot;,
+      &quot;kia&quot;,
+      &quot;genesis&quot;
+    ]
+  },
+  {
+    &quot;name&quot;: &quot;jlr&quot;,
+    &quot;pais&quot;: &quot;uk&quot;,
+    &quot;modelos&quot;: [
+      &quot;land rover&quot;,
+      &quot;jaguar&quot;
+    ]
+  },
+  {
+    &quot;name&quot;: &quot;nissan&quot;,
+    &quot;pais&quot;: &quot;japan&quot;,
+    &quot;modelos&quot;: [
+      &quot;nissan&quot;,
+      &quot;infiniti&quot;
+    ]
+  },
+  {
+    &quot;name&quot;: &quot;renault&quot;,
+    &quot;pais&quot;: &quot;france&quot;,
+    &quot;modelos&quot;: [
+      &quot;renault&quot;,
+      &quot;dacia&quot;
+    ]
+  },
+  {
+    &quot;name&quot;: &quot;stellantis&quot;,
+    &quot;pais&quot;: &quot;netherlands&quot;,
+    &quot;modelos&quot;: [
+      &quot;jeep&quot;,
+      &quot;dodge&quot;,
+      &quot;ram&quot;,
+      &quot;chrysler&quot;,
+      &quot;fiat&quot;,
+      &quot;peugeot&quot;,
+      &quot;alfa romeo&quot;
+    ]
+  },
+  {
+    &quot;name&quot;: &quot;toyota&quot;,
+    &quot;pais&quot;: &quot;japan&quot;,
+    &quot;modelos&quot;: [
+      &quot;toyota&quot;,
+      &quot;lexus&quot;
+    ]
+  },
+  {
+    &quot;name&quot;: &quot;volkswagen&quot;,
+    &quot;pais&quot;: &quot;germany&quot;,
+    &quot;modelos&quot;: [
+      &quot;volkswagen&quot;,
+      &quot;audi&quot;,
+      &quot;porsche&quot;,
+      &quot;lamborghini&quot;,
+      &quot;bentley&quot;
+    ]
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 6: Marca distinta al grupo fabricante</h3>
+<p>Autos cuya marca (model.name) es distinta del nombre de su grupo fabricante (maker.name). Mostrar descripción, marca y fabricante.</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$match&quot;: {
+      &quot;$expr&quot;: {
+        &quot;$ne&quot;: [
+          &quot;$model.name&quot;,
+          &quot;$maker.name&quot;
+        ]
+      }
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;descr&quot;: 1,
+      &quot;marca&quot;: &quot;$model.name&quot;,
+      &quot;fabricante&quot;: &quot;$maker.name&quot;
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (60 documentos)</p>
+<pre>[
+  {
+    &quot;descr&quot;: &quot;chevrolet silverado 1500 lt 5.3&quot;,
+    &quot;marca&quot;: &quot;chevrolet&quot;,
+    &quot;fabricante&quot;: &quot;gm&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;chevrolet tahoe lt 5.3&quot;,
+    &quot;marca&quot;: &quot;chevrolet&quot;,
+    &quot;fabricante&quot;: &quot;gm&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;chevrolet equinox lt 1.5t&quot;,
+    &quot;marca&quot;: &quot;chevrolet&quot;,
+    &quot;fabricante&quot;: &quot;gm&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;chevrolet trax 1rs 1.2t&quot;,
+    &quot;marca&quot;: &quot;chevrolet&quot;,
+    &quot;fabricante&quot;: &quot;gm&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;chevrolet malibu lt 1.5t&quot;,
+    &quot;marca&quot;: &quot;chevrolet&quot;,
+    &quot;fabricante&quot;: &quot;gm&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;chevrolet corvette stingray 6.2&quot;,
+    &quot;marca&quot;: &quot;chevrolet&quot;,
+    &quot;fabricante&quot;: &quot;gm&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;chevrolet camaro ss 6.2&quot;,
+    &quot;marca&quot;: &quot;chevrolet&quot;,
+    &quot;fabricante&quot;: &quot;gm&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;chevrolet colorado z71 2.7t&quot;,
+    &quot;marca&quot;: &quot;chevrolet&quot;,
+    &quot;fabricante&quot;: &quot;gm&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;gmc sierra 1500 denali 6.2&quot;,
+    &quot;marca&quot;: &quot;gmc&quot;,
+    &quot;fabricante&quot;: &quot;gm&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;gmc yukon denali 6.2&quot;,
+    &quot;marca&quot;: &quot;gmc&quot;,
+    &quot;fabricante&quot;: &quot;gm&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;gmc terrain sle 1.5t&quot;,
+    &quot;marca&quot;: &quot;gmc&quot;,
+    &quot;fabricante&quot;: &quot;gm&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;cadillac escalade 6.2&quot;,
+    &quot;marca&quot;: &quot;cadillac&quot;,
+    &quot;fabricante&quot;: &quot;gm&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;cadillac ct5-v blackwing 6.2&quot;,
+    &quot;marca&quot;: &quot;cadillac&quot;,
+    &quot;fabricante&quot;: &quot;gm&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;cadillac xt5 premium luxury 2.0t&quot;,
+    &quot;marca&quot;: &quot;cadillac&quot;,
+    &quot;fabricante&quot;: &quot;gm&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;buick envista 1.2t&quot;,
+    &quot;marca&quot;: &quot;buick&quot;,
+    &quot;fabricante&quot;: &quot;gm&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;buick enclave 2.5t&quot;,
+    &quot;marca&quot;: &quot;buick&quot;,
+    &quot;fabricante&quot;: &quot;gm&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;lincoln navigator 3.5&quot;,
+    &quot;marca&quot;: &quot;lincoln&quot;,
+    &quot;fabricante&quot;: &quot;ford&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;lincoln aviator 3.0&quot;,
+    &quot;marca&quot;: &quot;lincoln&quot;,
+    &quot;fabricante&quot;: &quot;ford&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;jeep wrangler rubicon 3.6&quot;,
+    &quot;marca&quot;: &quot;jeep&quot;,
+    &quot;fabricante&quot;: &quot;stellantis&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;jeep grand cherokee limited 3.6&quot;,
+    &quot;marca&quot;: &quot;jeep&quot;,
+    &quot;fabricante&quot;: &quot;stellantis&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;jeep compass latitude 2.0t&quot;,
+    &quot;marca&quot;: &quot;jeep&quot;,
+    &quot;fabricante&quot;: &quot;stellantis&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;jeep gladiator sport 3.6&quot;,
+    &quot;marca&quot;: &quot;jeep&quot;,
+    &quot;fabricante&quot;: &quot;stellantis&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;dodge durango r/t 5.7&quot;,
+    &quot;marca&quot;: &quot;dodge&quot;,
+    &quot;fabricante&quot;: &quot;stellantis&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;dodge charger scat pack 6.4&quot;,
+    &quot;marca&quot;: &quot;dodge&quot;,
+    &quot;fabricante&quot;: &quot;stellantis&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;dodge challenger srt hellcat 6.2&quot;,
+    &quot;marca&quot;: &quot;dodge&quot;,
+    &quot;fabricante&quot;: &quot;stellantis&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;dodge hornet gt 2.0t&quot;,
+    &quot;marca&quot;: &quot;dodge&quot;,
+    &quot;fabricante&quot;: &quot;stellantis&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;ram 1500 laramie 3.0 hurricane&quot;,
+    &quot;marca&quot;: &quot;ram&quot;,
+    &quot;fabricante&quot;: &quot;stellantis&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;chrysler pacifica touring l 3.6&quot;,
+    &quot;marca&quot;: &quot;chrysler&quot;,
+    &quot;fabricante&quot;: &quot;stellantis&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;fiat 500x sport 1.3t&quot;,
+    &quot;marca&quot;: &quot;fiat&quot;,
+    &quot;fabricante&quot;: &quot;stellantis&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;peugeot 2008 gt 1.2t&quot;,
+    &quot;marca&quot;: &quot;peugeot&quot;,
+    &quot;fabricante&quot;: &quot;stellantis&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;peugeot 3008 gt 1.6t&quot;,
+    &quot;marca&quot;: &quot;peugeot&quot;,
+    &quot;fabricante&quot;: &quot;stellantis&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;alfa romeo giulia 2.0t&quot;,
+    &quot;marca&quot;: &quot;alfa romeo&quot;,
+    &quot;fabricante&quot;: &quot;stellantis&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;alfa romeo stelvio quadrifoglio 2.9&quot;,
+    &quot;marca&quot;: &quot;alfa romeo&quot;,
+    &quot;fabricante&quot;: &quot;stellantis&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;lexus rx 350 2.4t&quot;,
+    &quot;marca&quot;: &quot;lexus&quot;,
+    &quot;fabricante&quot;: &quot;toyota&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;lexus es 300h 2.5&quot;,
+    &quot;marca&quot;: &quot;lexus&quot;,
+    &quot;fabricante&quot;: &quot;toyota&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;lexus lx 600 3.4&quot;,
+    &quot;marca&quot;: &quot;lexus&quot;,
+    &quot;fabricante&quot;: &quot;toyota&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;acura integra a-spec 1.5t&quot;,
+    &quot;marca&quot;: &quot;acura&quot;,
+    &quot;fabricante&quot;: &quot;honda&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;acura mdx 3.5&quot;,
+    &quot;marca&quot;: &quot;acura&quot;,
+    &quot;fabricante&quot;: &quot;honda&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;infiniti qx60 2.0t&quot;,
+    &quot;marca&quot;: &quot;infiniti&quot;,
+    &quot;fabricante&quot;: &quot;nissan&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;kia forte lxs 2.0&quot;,
+    &quot;marca&quot;: &quot;kia&quot;,
+    &quot;fabricante&quot;: &quot;hyundai&quot;
+  }
+]
+... (20 más omitidos en el reporte)</pre>
+</div>
+<div class='query'>
+<h3>Consulta 7: Stats por país</h3>
+<p>Por país: número de autos, rendimiento promedio y potencia promedio (1 decimal), ordenado por número de autos.</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$group&quot;: {
+      &quot;_id&quot;: &quot;$country.name&quot;,
+      &quot;numAutos&quot;: {
+        &quot;$sum&quot;: 1
+      },
+      &quot;mpgPromedio&quot;: {
+        &quot;$avg&quot;: &quot;$mpg&quot;
+      },
+      &quot;hpPromedio&quot;: {
+        &quot;$avg&quot;: &quot;$horsepower&quot;
+      }
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;pais&quot;: &quot;$_id&quot;,
+      &quot;numAutos&quot;: 1,
+      &quot;mpgPromedio&quot;: {
+        &quot;$round&quot;: [
+          &quot;$mpgPromedio&quot;,
+          1
+        ]
+      },
+      &quot;hpPromedio&quot;: {
+        &quot;$round&quot;: [
+          &quot;$hpPromedio&quot;,
+          1
+        ]
+      }
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;numAutos&quot;: -1
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (10 documentos)</p>
+<pre>[
+  {
+    &quot;numAutos&quot;: 45,
+    &quot;pais&quot;: &quot;japan&quot;,
+    &quot;mpgPromedio&quot;: 29.6,
+    &quot;hpPromedio&quot;: 218.2
+  },
+  {
+    &quot;numAutos&quot;: 28,
+    &quot;pais&quot;: &quot;usa&quot;,
+    &quot;mpgPromedio&quot;: 22.0,
+    &quot;hpPromedio&quot;: 328.8
+  },
+  {
+    &quot;numAutos&quot;: 21,
+    &quot;pais&quot;: &quot;germany&quot;,
+    &quot;mpgPromedio&quot;: 25.0,
+    &quot;hpPromedio&quot;: 302.7
+  },
+  {
+    &quot;numAutos&quot;: 15,
+    &quot;pais&quot;: &quot;netherlands&quot;,
+    &quot;mpgPromedio&quot;: 23.1,
+    &quot;hpPromedio&quot;: 323.8
+  },
+  {
+    &quot;numAutos&quot;: 13,
+    &quot;pais&quot;: &quot;korea&quot;,
+    &quot;mpgPromedio&quot;: 26.9,
+    &quot;hpPromedio&quot;: 235.5
+  },
+  {
+    &quot;numAutos&quot;: 5,
+    &quot;pais&quot;: &quot;china&quot;,
+    &quot;mpgPromedio&quot;: 32.0,
+    &quot;hpPromedio&quot;: 130.4
+  },
+  {
+    &quot;numAutos&quot;: 4,
+    &quot;pais&quot;: &quot;uk&quot;,
+    &quot;mpgPromedio&quot;: 20.0,
+    &quot;hpPromedio&quot;: 392.8
+  },
+  {
+    &quot;numAutos&quot;: 3,
+    &quot;pais&quot;: &quot;sweden&quot;,
+    &quot;mpgPromedio&quot;: 25.0,
+    &quot;hpPromedio&quot;: 263.0
+  },
+  {
+    &quot;numAutos&quot;: 2,
+    &quot;pais&quot;: &quot;france&quot;,
+    &quot;mpgPromedio&quot;: 36.0,
+    &quot;hpPromedio&quot;: 106.0
+  },
+  {
+    &quot;numAutos&quot;: 2,
+    &quot;pais&quot;: &quot;italy&quot;,
+    &quot;mpgPromedio&quot;: 15.5,
+    &quot;hpPromedio&quot;: 715.5
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 8: Stats por grupo fabricante</h3>
+<p>Por grupo fabricante: número de autos, marcas distintas con autos y potencia promedio (1 decimal), ordenado por número de autos.</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$group&quot;: {
+      &quot;_id&quot;: {
+        &quot;makerId&quot;: &quot;$makerId&quot;,
+        &quot;name&quot;: &quot;$maker.name&quot;
+      },
+      &quot;numAutos&quot;: {
+        &quot;$sum&quot;: 1
+      },
+      &quot;marcas&quot;: {
+        &quot;$addToSet&quot;: &quot;$model.name&quot;
+      },
+      &quot;hpPromedio&quot;: {
+        &quot;$avg&quot;: &quot;$horsepower&quot;
+      }
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;fabricante&quot;: &quot;$_id.name&quot;,
+      &quot;numAutos&quot;: 1,
+      &quot;numMarcas&quot;: {
+        &quot;$size&quot;: &quot;$marcas&quot;
+      },
+      &quot;hpPromedio&quot;: {
+        &quot;$round&quot;: [
+          &quot;$hpPromedio&quot;,
+          1
+        ]
+      }
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;numAutos&quot;: -1
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (20 documentos)</p>
+<pre>[
+  {
+    &quot;numAutos&quot;: 16,
+    &quot;fabricante&quot;: &quot;gm&quot;,
+    &quot;numMarcas&quot;: 4,
+    &quot;hpPromedio&quot;: 327.8
+  },
+  {
+    &quot;numAutos&quot;: 15,
+    &quot;fabricante&quot;: &quot;stellantis&quot;,
+    &quot;numMarcas&quot;: 7,
+    &quot;hpPromedio&quot;: 323.8
+  },
+  {
+    &quot;numAutos&quot;: 14,
+    &quot;fabricante&quot;: &quot;toyota&quot;,
+    &quot;numMarcas&quot;: 2,
+    &quot;hpPromedio&quot;: 255.3
+  },
+  {
+    &quot;numAutos&quot;: 13,
+    &quot;fabricante&quot;: &quot;hyundai&quot;,
+    &quot;numMarcas&quot;: 3,
+    &quot;hpPromedio&quot;: 235.5
+  },
+  {
+    &quot;numAutos&quot;: 12,
+    &quot;fabricante&quot;: &quot;ford&quot;,
+    &quot;numMarcas&quot;: 2,
+    &quot;hpPromedio&quot;: 330.1
+  },
+  {
+    &quot;numAutos&quot;: 12,
+    &quot;fabricante&quot;: &quot;volkswagen&quot;,
+    &quot;numMarcas&quot;: 3,
+    &quot;hpPromedio&quot;: 285.5
+  },
+  {
+    &quot;numAutos&quot;: 8,
+    &quot;fabricante&quot;: &quot;honda&quot;,
+    &quot;numMarcas&quot;: 2,
+    &quot;hpPromedio&quot;: 227.8
+  },
+  {
+    &quot;numAutos&quot;: 8,
+    &quot;fabricante&quot;: &quot;nissan&quot;,
+    &quot;numMarcas&quot;: 2,
+    &quot;hpPromedio&quot;: 219.4
+  },
+  {
+    &quot;numAutos&quot;: 5,
+    &quot;fabricante&quot;: &quot;mazda&quot;,
+    &quot;numMarcas&quot;: 1,
+    &quot;hpPromedio&quot;: 219.0
+  },
+  {
+    &quot;numAutos&quot;: 5,
+    &quot;fabricante&quot;: &quot;bmw&quot;,
+    &quot;numMarcas&quot;: 2,
+    &quot;hpPromedio&quot;: 317.8
+  },
+  {
+    &quot;numAutos&quot;: 4,
+    &quot;fabricante&quot;: &quot;mercedes-benz&quot;,
+    &quot;numMarcas&quot;: 1,
+    &quot;hpPromedio&quot;: 335.5
+  },
+  {
+    &quot;numAutos&quot;: 4,
+    &quot;fabricante&quot;: &quot;subaru&quot;,
+    &quot;numMarcas&quot;: 1,
+    &quot;hpPromedio&quot;: 203.8
+  },
+  {
+    &quot;numAutos&quot;: 4,
+    &quot;fabricante&quot;: &quot;jlr&quot;,
+    &quot;numMarcas&quot;: 2,
+    &quot;hpPromedio&quot;: 392.8
+  },
+  {
+    &quot;numAutos&quot;: 3,
+    &quot;fabricante&quot;: &quot;suzuki&quot;,
+    &quot;numMarcas&quot;: 1,
+    &quot;hpPromedio&quot;: 106.7
+  },
+  {
+    &quot;numAutos&quot;: 3,
+    &quot;fabricante&quot;: &quot;saic&quot;,
+    &quot;numMarcas&quot;: 1,
+    &quot;hpPromedio&quot;: 128.3
+  },
+  {
+    &quot;numAutos&quot;: 3,
+    &quot;fabricante&quot;: &quot;volvo&quot;,
+    &quot;numMarcas&quot;: 1,
+    &quot;hpPromedio&quot;: 263.0
+  },
+  {
+    &quot;numAutos&quot;: 3,
+    &quot;fabricante&quot;: &quot;mitsubishi&quot;,
+    &quot;numMarcas&quot;: 1,
+    &quot;hpPromedio&quot;: 146.7
+  },
+  {
+    &quot;numAutos&quot;: 2,
+    &quot;fabricante&quot;: &quot;chery&quot;,
+    &quot;numMarcas&quot;: 1,
+    &quot;hpPromedio&quot;: 133.5
+  },
+  {
+    &quot;numAutos&quot;: 2,
+    &quot;fabricante&quot;: &quot;renault&quot;,
+    &quot;numMarcas&quot;: 1,
+    &quot;hpPromedio&quot;: 106.0
+  },
+  {
+    &quot;numAutos&quot;: 2,
+    &quot;fabricante&quot;: &quot;ferrari&quot;,
+    &quot;numMarcas&quot;: 1,
+    &quot;hpPromedio&quot;: 715.5
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 9: Modelos (marcas) por continente</h3>
+<p>Contar cuántos modelos (marcas) hay por continente.</p>
+<p>Colección: <code>makers</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$unwind&quot;: &quot;$models&quot;
+  },
+  {
+    &quot;$group&quot;: {
+      &quot;_id&quot;: &quot;$continent.name&quot;,
+      &quot;numModelos&quot;: {
+        &quot;$sum&quot;: 1
+      }
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;continente&quot;: &quot;$_id&quot;,
+      &quot;numModelos&quot;: 1
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;numModelos&quot;: -1
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (3 documentos)</p>
+<pre>[
+  {
+    &quot;numModelos&quot;: 21,
+    &quot;continente&quot;: &quot;europe&quot;
+  },
+  {
+    &quot;numModelos&quot;: 15,
+    &quot;continente&quot;: &quot;asia&quot;
+  },
+  {
+    &quot;numModelos&quot;: 6,
+    &quot;continente&quot;: &quot;america&quot;
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 10: Rangos de rendimiento (bucket)</h3>
+<p>Clasificar autos en rangos de mpg [0,20), [20,25), [25,30), [30,35), [35,40) y 40+, contando cuántos hay y su peso promedio.</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$bucket&quot;: {
+      &quot;groupBy&quot;: &quot;$mpg&quot;,
+      &quot;boundaries&quot;: [
+        0,
+        20,
+        25,
+        30,
+        35,
+        40
+      ],
+      &quot;default&quot;: &quot;40+&quot;,
+      &quot;output&quot;: {
+        &quot;cantidad&quot;: {
+          &quot;$sum&quot;: 1
+        },
+        &quot;pesoPromedio&quot;: {
+          &quot;$avg&quot;: &quot;$weight&quot;
+        }
+      }
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;rango&quot;: {
+        &quot;$switch&quot;: {
+          &quot;branches&quot;: [
+            {
+              &quot;case&quot;: {
+                &quot;$eq&quot;: [
+                  &quot;$_id&quot;,
+                  0
+                ]
+              },
+              &quot;then&quot;: &quot;[0,20)&quot;
+            },
+            {
+              &quot;case&quot;: {
+                &quot;$eq&quot;: [
+                  &quot;$_id&quot;,
+                  20
+                ]
+              },
+              &quot;then&quot;: &quot;[20,25)&quot;
+            },
+            {
+              &quot;case&quot;: {
+                &quot;$eq&quot;: [
+                  &quot;$_id&quot;,
+                  25
+                ]
+              },
+              &quot;then&quot;: &quot;[25,30)&quot;
+            },
+            {
+              &quot;case&quot;: {
+                &quot;$eq&quot;: [
+                  &quot;$_id&quot;,
+                  30
+                ]
+              },
+              &quot;then&quot;: &quot;[30,35)&quot;
+            },
+            {
+              &quot;case&quot;: {
+                &quot;$eq&quot;: [
+                  &quot;$_id&quot;,
+                  35
+                ]
+              },
+              &quot;then&quot;: &quot;[35,40)&quot;
+            }
+          ],
+          &quot;default&quot;: &quot;$_id&quot;
+        }
+      },
+      &quot;cantidad&quot;: 1,
+      &quot;pesoPromedio&quot;: {
+        &quot;$round&quot;: [
+          &quot;$pesoPromedio&quot;,
+          1
+        ]
+      }
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (6 documentos)</p>
+<pre>[
+  {
+    &quot;cantidad&quot;: 28,
+    &quot;rango&quot;: &quot;[0,20)&quot;,
+    &quot;pesoPromedio&quot;: 4748.9
+  },
+  {
+    &quot;cantidad&quot;: 36,
+    &quot;rango&quot;: &quot;[20,25)&quot;,
+    &quot;pesoPromedio&quot;: 4328.1
+  },
+  {
+    &quot;cantidad&quot;: 34,
+    &quot;rango&quot;: &quot;[25,30)&quot;,
+    &quot;pesoPromedio&quot;: 3686.8
+  },
+  {
+    &quot;cantidad&quot;: 22,
+    &quot;rango&quot;: &quot;[30,35)&quot;,
+    &quot;pesoPromedio&quot;: 3102.3
+  },
+  {
+    &quot;cantidad&quot;: 10,
+    &quot;rango&quot;: &quot;[35,40)&quot;,
+    &quot;pesoPromedio&quot;: 2875.0
+  },
+  {
+    &quot;cantidad&quot;: 8,
+    &quot;rango&quot;: &quot;40+&quot;,
+    &quot;pesoPromedio&quot;: 3143.8
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 11: Top 5 fabricantes por mpg (min 8 autos)</h3>
+<p>Los 5 fabricantes con mayor rendimiento promedio, solo con al menos 8 autos registrados.</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$group&quot;: {
+      &quot;_id&quot;: &quot;$maker.name&quot;,
+      &quot;numAutos&quot;: {
+        &quot;$sum&quot;: 1
+      },
+      &quot;mpgPromedio&quot;: {
+        &quot;$avg&quot;: &quot;$mpg&quot;
+      }
+    }
+  },
+  {
+    &quot;$match&quot;: {
+      &quot;numAutos&quot;: {
+        &quot;$gte&quot;: 8
+      }
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;fabricante&quot;: &quot;$_id&quot;,
+      &quot;numAutos&quot;: 1,
+      &quot;mpgPromedio&quot;: {
+        &quot;$round&quot;: [
+          &quot;$mpgPromedio&quot;,
+          1
+        ]
+      }
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;mpgPromedio&quot;: -1
+    }
+  },
+  {
+    &quot;$limit&quot;: 5
+  }
+]</pre>
+<p><strong>Resultado</strong> (5 documentos)</p>
+<pre>[
+  {
+    &quot;numAutos&quot;: 14,
+    &quot;fabricante&quot;: &quot;toyota&quot;,
+    &quot;mpgPromedio&quot;: 30.4
+  },
+  {
+    &quot;numAutos&quot;: 8,
+    &quot;fabricante&quot;: &quot;honda&quot;,
+    &quot;mpgPromedio&quot;: 29.6
+  },
+  {
+    &quot;numAutos&quot;: 8,
+    &quot;fabricante&quot;: &quot;nissan&quot;,
+    &quot;mpgPromedio&quot;: 27.8
+  },
+  {
+    &quot;numAutos&quot;: 13,
+    &quot;fabricante&quot;: &quot;hyundai&quot;,
+    &quot;mpgPromedio&quot;: 26.9
+  },
+  {
+    &quot;numAutos&quot;: 12,
+    &quot;fabricante&quot;: &quot;volkswagen&quot;,
+    &quot;mpgPromedio&quot;: 24.9
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 12: Categoría mpg por continente</h3>
+<p>Clasificar cada auto como Alta/Media/Baja según mpg y contar por continente y categoría.</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$addFields&quot;: {
+      &quot;categoria&quot;: {
+        &quot;$switch&quot;: {
+          &quot;branches&quot;: [
+            {
+              &quot;case&quot;: {
+                &quot;$gte&quot;: [
+                  &quot;$mpg&quot;,
+                  30
+                ]
+              },
+              &quot;then&quot;: &quot;Alta&quot;
+            },
+            {
+              &quot;case&quot;: {
+                &quot;$and&quot;: [
+                  {
+                    &quot;$gte&quot;: [
+                      &quot;$mpg&quot;,
+                      20
+                    ]
+                  },
+                  {
+                    &quot;$lt&quot;: [
+                      &quot;$mpg&quot;,
+                      30
+                    ]
+                  }
+                ]
+              },
+              &quot;then&quot;: &quot;Media&quot;
+            }
+          ],
+          &quot;default&quot;: &quot;Baja&quot;
+        }
+      }
+    }
+  },
+  {
+    &quot;$group&quot;: {
+      &quot;_id&quot;: {
+        &quot;continente&quot;: &quot;$continent.name&quot;,
+        &quot;categoria&quot;: &quot;$categoria&quot;
+      },
+      &quot;cantidad&quot;: {
+        &quot;$sum&quot;: 1
+      }
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;continente&quot;: &quot;$_id.continente&quot;,
+      &quot;categoria&quot;: &quot;$_id.categoria&quot;,
+      &quot;cantidad&quot;: 1
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;continente&quot;: 1,
+      &quot;categoria&quot;: 1
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (9 documentos)</p>
+<pre>[
+  {
+    &quot;cantidad&quot;: 5,
+    &quot;continente&quot;: &quot;america&quot;,
+    &quot;categoria&quot;: &quot;Alta&quot;
+  },
+  {
+    &quot;cantidad&quot;: 13,
+    &quot;continente&quot;: &quot;america&quot;,
+    &quot;categoria&quot;: &quot;Baja&quot;
+  },
+  {
+    &quot;cantidad&quot;: 10,
+    &quot;continente&quot;: &quot;america&quot;,
+    &quot;categoria&quot;: &quot;Media&quot;
+  },
+  {
+    &quot;cantidad&quot;: 27,
+    &quot;continente&quot;: &quot;asia&quot;,
+    &quot;categoria&quot;: &quot;Alta&quot;
+  },
+  {
+    &quot;cantidad&quot;: 2,
+    &quot;continente&quot;: &quot;asia&quot;,
+    &quot;categoria&quot;: &quot;Baja&quot;
+  },
+  {
+    &quot;cantidad&quot;: 34,
+    &quot;continente&quot;: &quot;asia&quot;,
+    &quot;categoria&quot;: &quot;Media&quot;
+  },
+  {
+    &quot;cantidad&quot;: 8,
+    &quot;continente&quot;: &quot;europe&quot;,
+    &quot;categoria&quot;: &quot;Alta&quot;
+  },
+  {
+    &quot;cantidad&quot;: 13,
+    &quot;continente&quot;: &quot;europe&quot;,
+    &quot;categoria&quot;: &quot;Baja&quot;
+  },
+  {
+    &quot;cantidad&quot;: 26,
+    &quot;continente&quot;: &quot;europe&quot;,
+    &quot;categoria&quot;: &quot;Media&quot;
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 13: Autos por fabricante (incluye cero)</h3>
+<p>Desde la colección makers, obtener cuántos autos tiene registrados cada fabricante (incluidos los que tienen cero).</p>
+<p>Colección: <code>makers</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$lookup&quot;: {
+      &quot;from&quot;: &quot;cars&quot;,
+      &quot;localField&quot;: &quot;makerId&quot;,
+      &quot;foreignField&quot;: &quot;makerId&quot;,
+      &quot;as&quot;: &quot;autos&quot;
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;fabricante&quot;: &quot;$name&quot;,
+      &quot;fullName&quot;: 1,
+      &quot;numAutos&quot;: {
+        &quot;$size&quot;: &quot;$autos&quot;
+      }
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;numAutos&quot;: -1,
+      &quot;fabricante&quot;: 1
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (20 documentos)</p>
+<pre>[
+  {
+    &quot;fullName&quot;: &quot;General Motors&quot;,
+    &quot;fabricante&quot;: &quot;gm&quot;,
+    &quot;numAutos&quot;: 16
+  },
+  {
+    &quot;fullName&quot;: &quot;Stellantis N.V.&quot;,
+    &quot;fabricante&quot;: &quot;stellantis&quot;,
+    &quot;numAutos&quot;: 15
+  },
+  {
+    &quot;fullName&quot;: &quot;Toyota Motor Corporation&quot;,
+    &quot;fabricante&quot;: &quot;toyota&quot;,
+    &quot;numAutos&quot;: 14
+  },
+  {
+    &quot;fullName&quot;: &quot;Hyundai Motor Group&quot;,
+    &quot;fabricante&quot;: &quot;hyundai&quot;,
+    &quot;numAutos&quot;: 13
+  },
+  {
+    &quot;fullName&quot;: &quot;Ford Motor Company&quot;,
+    &quot;fabricante&quot;: &quot;ford&quot;,
+    &quot;numAutos&quot;: 12
+  },
+  {
+    &quot;fullName&quot;: &quot;Volkswagen Group&quot;,
+    &quot;fabricante&quot;: &quot;volkswagen&quot;,
+    &quot;numAutos&quot;: 12
+  },
+  {
+    &quot;fullName&quot;: &quot;Honda Motor Co.&quot;,
+    &quot;fabricante&quot;: &quot;honda&quot;,
+    &quot;numAutos&quot;: 8
+  },
+  {
+    &quot;fullName&quot;: &quot;Nissan Motor Co.&quot;,
+    &quot;fabricante&quot;: &quot;nissan&quot;,
+    &quot;numAutos&quot;: 8
+  },
+  {
+    &quot;fullName&quot;: &quot;BMW Group&quot;,
+    &quot;fabricante&quot;: &quot;bmw&quot;,
+    &quot;numAutos&quot;: 5
+  },
+  {
+    &quot;fullName&quot;: &quot;Mazda Motor Corporation&quot;,
+    &quot;fabricante&quot;: &quot;mazda&quot;,
+    &quot;numAutos&quot;: 5
+  },
+  {
+    &quot;fullName&quot;: &quot;Jaguar Land Rover&quot;,
+    &quot;fabricante&quot;: &quot;jlr&quot;,
+    &quot;numAutos&quot;: 4
+  },
+  {
+    &quot;fullName&quot;: &quot;Mercedes-Benz Group&quot;,
+    &quot;fabricante&quot;: &quot;mercedes-benz&quot;,
+    &quot;numAutos&quot;: 4
+  },
+  {
+    &quot;fullName&quot;: &quot;Subaru Corporation&quot;,
+    &quot;fabricante&quot;: &quot;subaru&quot;,
+    &quot;numAutos&quot;: 4
+  },
+  {
+    &quot;fullName&quot;: &quot;Mitsubishi Motors&quot;,
+    &quot;fabricante&quot;: &quot;mitsubishi&quot;,
+    &quot;numAutos&quot;: 3
+  },
+  {
+    &quot;fullName&quot;: &quot;SAIC Motor&quot;,
+    &quot;fabricante&quot;: &quot;saic&quot;,
+    &quot;numAutos&quot;: 3
+  },
+  {
+    &quot;fullName&quot;: &quot;Suzuki Motor Corporation&quot;,
+    &quot;fabricante&quot;: &quot;suzuki&quot;,
+    &quot;numAutos&quot;: 3
+  },
+  {
+    &quot;fullName&quot;: &quot;Volvo Cars&quot;,
+    &quot;fabricante&quot;: &quot;volvo&quot;,
+    &quot;numAutos&quot;: 3
+  },
+  {
+    &quot;fullName&quot;: &quot;Chery Automobile&quot;,
+    &quot;fabricante&quot;: &quot;chery&quot;,
+    &quot;numAutos&quot;: 2
+  },
+  {
+    &quot;fullName&quot;: &quot;Ferrari N.V.&quot;,
+    &quot;fabricante&quot;: &quot;ferrari&quot;,
+    &quot;numAutos&quot;: 2
+  },
+  {
+    &quot;fullName&quot;: &quot;Renault Group&quot;,
+    &quot;fabricante&quot;: &quot;renault&quot;,
+    &quot;numAutos&quot;: 2
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 14: Modelos del catálogo sin autos</h3>
+<p>Modelos del catálogo que no tienen ningún auto registrado.</p>
+<p>Colección: <code>makers</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$unwind&quot;: &quot;$models&quot;
+  },
+  {
+    &quot;$lookup&quot;: {
+      &quot;from&quot;: &quot;cars&quot;,
+      &quot;localField&quot;: &quot;models.modelId&quot;,
+      &quot;foreignField&quot;: &quot;modelId&quot;,
+      &quot;as&quot;: &quot;autos&quot;
+    }
+  },
+  {
+    &quot;$match&quot;: {
+      &quot;autos&quot;: {
+        &quot;$size&quot;: 0
+      }
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;modelId&quot;: &quot;$models.modelId&quot;,
+      &quot;modelo&quot;: &quot;$models.name&quot;,
+      &quot;fabricante&quot;: &quot;$name&quot;
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;fabricante&quot;: 1,
+      &quot;modelo&quot;: 1
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (3 documentos)</p>
+<pre>[
+  {
+    &quot;modelId&quot;: 36,
+    &quot;modelo&quot;: &quot;dacia&quot;,
+    &quot;fabricante&quot;: &quot;renault&quot;
+  },
+  {
+    &quot;modelId&quot;: 31,
+    &quot;modelo&quot;: &quot;bentley&quot;,
+    &quot;fabricante&quot;: &quot;volkswagen&quot;
+  },
+  {
+    &quot;modelId&quot;: 30,
+    &quot;modelo&quot;: &quot;lamborghini&quot;,
+    &quot;fabricante&quot;: &quot;volkswagen&quot;
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 15: Top 5 más potentes + fullName</h3>
+<p>Para los 5 autos más potentes: descripción, potencia y fullName del fabricante.</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$sort&quot;: {
+      &quot;horsepower&quot;: -1
+    }
+  },
+  {
+    &quot;$limit&quot;: 5
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;descr&quot;: 1,
+      &quot;horsepower&quot;: 1,
+      &quot;fullName&quot;: &quot;$maker.fullName&quot;
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (5 documentos)</p>
+<pre>[
+  {
+    &quot;descr&quot;: &quot;ferrari 812 competizione 6.5&quot;,
+    &quot;horsepower&quot;: 819,
+    &quot;fullName&quot;: &quot;Ferrari N.V.&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;dodge challenger srt hellcat 6.2&quot;,
+    &quot;horsepower&quot;: 717,
+    &quot;fullName&quot;: &quot;Stellantis N.V.&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;cadillac ct5-v blackwing 6.2&quot;,
+    &quot;horsepower&quot;: 668,
+    &quot;fullName&quot;: &quot;General Motors&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;ferrari roma 3.9&quot;,
+    &quot;horsepower&quot;: 612,
+    &quot;fullName&quot;: &quot;Ferrari N.V.&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;audi rs 6 avant 4.0&quot;,
+    &quot;horsepower&quot;: 591,
+    &quot;fullName&quot;: &quot;Volkswagen Group&quot;
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 16: Top 3 mpg por continente</h3>
+<p>Para cada continente, los 3 autos con mayor rendimiento (descripción y mpg).</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$sort&quot;: {
+      &quot;continent.name&quot;: 1,
+      &quot;mpg&quot;: -1
+    }
+  },
+  {
+    &quot;$group&quot;: {
+      &quot;_id&quot;: &quot;$continent.name&quot;,
+      &quot;top&quot;: {
+        &quot;$push&quot;: {
+          &quot;descr&quot;: &quot;$descr&quot;,
+          &quot;mpg&quot;: &quot;$mpg&quot;
+        }
+      }
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;continente&quot;: &quot;$_id&quot;,
+      &quot;top3&quot;: {
+        &quot;$slice&quot;: [
+          &quot;$top&quot;,
+          3
+        ]
+      }
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;continente&quot;: 1
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (3 documentos)</p>
+<pre>[
+  {
+    &quot;continente&quot;: &quot;america&quot;,
+    &quot;top3&quot;: [
+      {
+        &quot;descr&quot;: &quot;ford maverick xlt hybrid 2.5&quot;,
+        &quot;mpg&quot;: 37
+      },
+      {
+        &quot;descr&quot;: &quot;chevrolet malibu lt 1.5t&quot;,
+        &quot;mpg&quot;: 32
+      },
+      {
+        &quot;descr&quot;: &quot;chevrolet trax 1rs 1.2t&quot;,
+        &quot;mpg&quot;: 30
+      }
+    ]
+  },
+  {
+    &quot;continente&quot;: &quot;asia&quot;,
+    &quot;top3&quot;: [
+      {
+        &quot;descr&quot;: &quot;toyota camry le hybrid 2.5&quot;,
+        &quot;mpg&quot;: 51
+      },
+      {
+        &quot;descr&quot;: &quot;toyota corolla hybrid le 1.8&quot;,
+        &quot;mpg&quot;: 50
+      },
+      {
+        &quot;descr&quot;: &quot;lexus es 300h 2.5&quot;,
+        &quot;mpg&quot;: 44
+      }
+    ]
+  },
+  {
+    &quot;continente&quot;: &quot;europe&quot;,
+    &quot;top3&quot;: [
+      {
+        &quot;descr&quot;: &quot;renault kardian 1.0t&quot;,
+        &quot;mpg&quot;: 40
+      },
+      {
+        &quot;descr&quot;: &quot;peugeot 2008 gt 1.2t&quot;,
+        &quot;mpg&quot;: 40
+      },
+      {
+        &quot;descr&quot;: &quot;volkswagen jetta se 1.5t&quot;,
+        &quot;mpg&quot;: 35
+      }
+    ]
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 17: Modelo con más autos por fabricante multi-marca</h3>
+<p>Para cada fabricante con más de un modelo, determinar cuál de sus modelos tiene más autos registrados.</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$group&quot;: {
+      &quot;_id&quot;: {
+        &quot;makerId&quot;: &quot;$makerId&quot;,
+        &quot;maker&quot;: &quot;$maker.name&quot;,
+        &quot;model&quot;: &quot;$model.name&quot;
+      },
+      &quot;numAutos&quot;: {
+        &quot;$sum&quot;: 1
+      }
+    }
+  },
+  {
+    &quot;$group&quot;: {
+      &quot;_id&quot;: {
+        &quot;makerId&quot;: &quot;$_id.makerId&quot;,
+        &quot;maker&quot;: &quot;$_id.maker&quot;
+      },
+      &quot;modelos&quot;: {
+        &quot;$push&quot;: {
+          &quot;modelo&quot;: &quot;$_id.model&quot;,
+          &quot;numAutos&quot;: &quot;$numAutos&quot;
+        }
+      },
+      &quot;numModelos&quot;: {
+        &quot;$sum&quot;: 1
+      }
+    }
+  },
+  {
+    &quot;$match&quot;: {
+      &quot;numModelos&quot;: {
+        &quot;$gt&quot;: 1
+      }
+    }
+  },
+  {
+    &quot;$unwind&quot;: &quot;$modelos&quot;
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;_id.maker&quot;: 1,
+      &quot;modelos.numAutos&quot;: -1
+    }
+  },
+  {
+    &quot;$group&quot;: {
+      &quot;_id&quot;: &quot;$_id&quot;,
+      &quot;modeloTop&quot;: {
+        &quot;$first&quot;: &quot;$modelos.modelo&quot;
+      },
+      &quot;numAutos&quot;: {
+        &quot;$first&quot;: &quot;$modelos.numAutos&quot;
+      }
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;fabricante&quot;: &quot;$_id.maker&quot;,
+      &quot;modeloTop&quot;: 1,
+      &quot;numAutos&quot;: 1
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;fabricante&quot;: 1
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (10 documentos)</p>
+<pre>[
+  {
+    &quot;modeloTop&quot;: &quot;bmw&quot;,
+    &quot;numAutos&quot;: 4,
+    &quot;fabricante&quot;: &quot;bmw&quot;
+  },
+  {
+    &quot;modeloTop&quot;: &quot;ford&quot;,
+    &quot;numAutos&quot;: 10,
+    &quot;fabricante&quot;: &quot;ford&quot;
+  },
+  {
+    &quot;modeloTop&quot;: &quot;chevrolet&quot;,
+    &quot;numAutos&quot;: 8,
+    &quot;fabricante&quot;: &quot;gm&quot;
+  },
+  {
+    &quot;modeloTop&quot;: &quot;honda&quot;,
+    &quot;numAutos&quot;: 6,
+    &quot;fabricante&quot;: &quot;honda&quot;
+  },
+  {
+    &quot;modeloTop&quot;: &quot;hyundai&quot;,
+    &quot;numAutos&quot;: 6,
+    &quot;fabricante&quot;: &quot;hyundai&quot;
+  },
+  {
+    &quot;modeloTop&quot;: &quot;land rover&quot;,
+    &quot;numAutos&quot;: 2,
+    &quot;fabricante&quot;: &quot;jlr&quot;
+  },
+  {
+    &quot;modeloTop&quot;: &quot;nissan&quot;,
+    &quot;numAutos&quot;: 7,
+    &quot;fabricante&quot;: &quot;nissan&quot;
+  },
+  {
+    &quot;modeloTop&quot;: &quot;dodge&quot;,
+    &quot;numAutos&quot;: 4,
+    &quot;fabricante&quot;: &quot;stellantis&quot;
+  },
+  {
+    &quot;modeloTop&quot;: &quot;toyota&quot;,
+    &quot;numAutos&quot;: 11,
+    &quot;fabricante&quot;: &quot;toyota&quot;
+  },
+  {
+    &quot;modeloTop&quot;: &quot;volkswagen&quot;,
+    &quot;numAutos&quot;: 6,
+    &quot;fabricante&quot;: &quot;volkswagen&quot;
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 18: Porcentaje de autos por continente</h3>
+<p>Porcentaje que representa cada continente sobre el total de autos (2 decimales).</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$group&quot;: {
+      &quot;_id&quot;: &quot;$continent.name&quot;,
+      &quot;numAutos&quot;: {
+        &quot;$sum&quot;: 1
+      }
+    }
+  },
+  {
+    &quot;$group&quot;: {
+      &quot;_id&quot;: null,
+      &quot;total&quot;: {
+        &quot;$sum&quot;: &quot;$numAutos&quot;
+      },
+      &quot;items&quot;: {
+        &quot;$push&quot;: {
+          &quot;continente&quot;: &quot;$_id&quot;,
+          &quot;numAutos&quot;: &quot;$numAutos&quot;
+        }
+      }
+    }
+  },
+  {
+    &quot;$unwind&quot;: &quot;$items&quot;
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;continente&quot;: &quot;$items.continente&quot;,
+      &quot;numAutos&quot;: &quot;$items.numAutos&quot;,
+      &quot;porcentaje&quot;: {
+        &quot;$round&quot;: [
+          {
+            &quot;$multiply&quot;: [
+              {
+                &quot;$divide&quot;: [
+                  &quot;$items.numAutos&quot;,
+                  &quot;$total&quot;
+                ]
+              },
+              100
+            ]
+          },
+          2
+        ]
+      }
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;porcentaje&quot;: -1
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (3 documentos)</p>
+<pre>[
+  {
+    &quot;continente&quot;: &quot;asia&quot;,
+    &quot;numAutos&quot;: 63,
+    &quot;porcentaje&quot;: 45.65
+  },
+  {
+    &quot;continente&quot;: &quot;europe&quot;,
+    &quot;numAutos&quot;: 47,
+    &quot;porcentaje&quot;: 34.06
+  },
+  {
+    &quot;continente&quot;: &quot;america&quot;,
+    &quot;numAutos&quot;: 28,
+    &quot;porcentaje&quot;: 20.29
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 19: Top 5 que más superan mpg promedio por cilindros</h3>
+<p>Los 5 autos que más superan el rendimiento promedio de los autos con su mismo número de cilindros, mostrando ese promedio y la diferencia.</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$setWindowFields&quot;: {
+      &quot;partitionBy&quot;: &quot;$cylinders&quot;,
+      &quot;output&quot;: {
+        &quot;mpgPromedioCilindros&quot;: {
+          &quot;$avg&quot;: &quot;$mpg&quot;
+        }
+      }
+    }
+  },
+  {
+    &quot;$addFields&quot;: {
+      &quot;diferencia&quot;: {
+        &quot;$subtract&quot;: [
+          &quot;$mpg&quot;,
+          &quot;$mpgPromedioCilindros&quot;
+        ]
+      }
+    }
+  },
+  {
+    &quot;$match&quot;: {
+      &quot;diferencia&quot;: {
+        &quot;$gt&quot;: 0
+      }
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;diferencia&quot;: -1
+    }
+  },
+  {
+    &quot;$limit&quot;: 5
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;descr&quot;: 1,
+      &quot;cylinders&quot;: 1,
+      &quot;mpg&quot;: 1,
+      &quot;mpgPromedioCilindros&quot;: {
+        &quot;$round&quot;: [
+          &quot;$mpgPromedioCilindros&quot;,
+          1
+        ]
+      },
+      &quot;diferencia&quot;: {
+        &quot;$round&quot;: [
+          &quot;$diferencia&quot;,
+          1
+        ]
+      }
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (5 documentos)</p>
+<pre>[
+  {
+    &quot;descr&quot;: &quot;toyota camry le hybrid 2.5&quot;,
+    &quot;mpg&quot;: 51,
+    &quot;cylinders&quot;: 4,
+    &quot;mpgPromedioCilindros&quot;: 28.8,
+    &quot;diferencia&quot;: 22.2
+  },
+  {
+    &quot;descr&quot;: &quot;toyota corolla hybrid le 1.8&quot;,
+    &quot;mpg&quot;: 50,
+    &quot;cylinders&quot;: 4,
+    &quot;mpgPromedioCilindros&quot;: 28.8,
+    &quot;diferencia&quot;: 21.2
+  },
+  {
+    &quot;descr&quot;: &quot;honda accord hybrid touring 2.0&quot;,
+    &quot;mpg&quot;: 44,
+    &quot;cylinders&quot;: 4,
+    &quot;mpgPromedioCilindros&quot;: 28.8,
+    &quot;diferencia&quot;: 15.2
+  },
+  {
+    &quot;descr&quot;: &quot;lexus es 300h 2.5&quot;,
+    &quot;mpg&quot;: 44,
+    &quot;cylinders&quot;: 4,
+    &quot;mpgPromedioCilindros&quot;: 28.8,
+    &quot;diferencia&quot;: 15.2
+  },
+  {
+    &quot;descr&quot;: &quot;toyota rav4 hybrid xle 2.5&quot;,
+    &quot;mpg&quot;: 40,
+    &quot;cylinders&quot;: 4,
+    &quot;mpgPromedioCilindros&quot;: 28.8,
+    &quot;diferencia&quot;: 11.2
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 20: Porcentaje 8+ cilindros por continente</h3>
+<p>Por continente: número de autos, cuántos tienen 8+ cilindros y el porcentaje (1 decimal).</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$group&quot;: {
+      &quot;_id&quot;: &quot;$continent.name&quot;,
+      &quot;numAutos&quot;: {
+        &quot;$sum&quot;: 1
+      },
+      &quot;con8mas&quot;: {
+        &quot;$sum&quot;: {
+          &quot;$cond&quot;: [
+            {
+              &quot;$gte&quot;: [
+                &quot;$cylinders&quot;,
+                8
+              ]
+            },
+            1,
+            0
+          ]
+        }
+      }
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;continente&quot;: &quot;$_id&quot;,
+      &quot;numAutos&quot;: 1,
+      &quot;con8mas&quot;: 1,
+      &quot;porcentaje&quot;: {
+        &quot;$round&quot;: [
+          {
+            &quot;$multiply&quot;: [
+              {
+                &quot;$divide&quot;: [
+                  &quot;$con8mas&quot;,
+                  &quot;$numAutos&quot;
+                ]
+              },
+              100
+            ]
+          },
+          1
+        ]
+      }
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;continente&quot;: 1
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (3 documentos)</p>
+<pre>[
+  {
+    &quot;numAutos&quot;: 28,
+    &quot;con8mas&quot;: 9,
+    &quot;continente&quot;: &quot;america&quot;,
+    &quot;porcentaje&quot;: 32.1
+  },
+  {
+    &quot;numAutos&quot;: 63,
+    &quot;con8mas&quot;: 0,
+    &quot;continente&quot;: &quot;asia&quot;,
+    &quot;porcentaje&quot;: 0.0
+  },
+  {
+    &quot;numAutos&quot;: 47,
+    &quot;con8mas&quot;: 8,
+    &quot;continente&quot;: &quot;europe&quot;,
+    &quot;porcentaje&quot;: 17.0
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 21: Top 10 hp por cada 1000 lb</h3>
+<p>Potencia por cada 1000 lb de peso; los 10 autos con mayor valor, junto con su país.</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$addFields&quot;: {
+      &quot;hpPor1000lb&quot;: {
+        &quot;$multiply&quot;: [
+          {
+            &quot;$divide&quot;: [
+              &quot;$horsepower&quot;,
+              &quot;$weight&quot;
+            ]
+          },
+          1000
+        ]
+      }
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;hpPor1000lb&quot;: -1
+    }
+  },
+  {
+    &quot;$limit&quot;: 10
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;descr&quot;: 1,
+      &quot;pais&quot;: &quot;$country.name&quot;,
+      &quot;horsepower&quot;: 1,
+      &quot;weight&quot;: 1,
+      &quot;hpPor1000lb&quot;: {
+        &quot;$round&quot;: [
+          &quot;$hpPor1000lb&quot;,
+          1
+        ]
+      }
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (10 documentos)</p>
+<pre>[
+  {
+    &quot;descr&quot;: &quot;ferrari 812 competizione 6.5&quot;,
+    &quot;horsepower&quot;: 819,
+    &quot;weight&quot;: 3600,
+    &quot;pais&quot;: &quot;italy&quot;,
+    &quot;hpPor1000lb&quot;: 227.5
+  },
+  {
+    &quot;descr&quot;: &quot;ferrari roma 3.9&quot;,
+    &quot;horsepower&quot;: 612,
+    &quot;weight&quot;: 3460,
+    &quot;pais&quot;: &quot;italy&quot;,
+    &quot;hpPor1000lb&quot;: 176.9
+  },
+  {
+    &quot;descr&quot;: &quot;cadillac ct5-v blackwing 6.2&quot;,
+    &quot;horsepower&quot;: 668,
+    &quot;weight&quot;: 4125,
+    &quot;pais&quot;: &quot;usa&quot;,
+    &quot;hpPor1000lb&quot;: 161.9
+  },
+  {
+    &quot;descr&quot;: &quot;dodge challenger srt hellcat 6.2&quot;,
+    &quot;horsepower&quot;: 717,
+    &quot;weight&quot;: 4450,
+    &quot;pais&quot;: &quot;netherlands&quot;,
+    &quot;hpPor1000lb&quot;: 161.1
+  },
+  {
+    &quot;descr&quot;: &quot;jaguar f-type r 5.0&quot;,
+    &quot;horsepower&quot;: 575,
+    &quot;weight&quot;: 3900,
+    &quot;pais&quot;: &quot;uk&quot;,
+    &quot;hpPor1000lb&quot;: 147.4
+  },
+  {
+    &quot;descr&quot;: &quot;chevrolet corvette stingray 6.2&quot;,
+    &quot;horsepower&quot;: 495,
+    &quot;weight&quot;: 3650,
+    &quot;pais&quot;: &quot;usa&quot;,
+    &quot;hpPor1000lb&quot;: 135.6
+  },
+  {
+    &quot;descr&quot;: &quot;bmw m3 competition 3.0&quot;,
+    &quot;horsepower&quot;: 503,
+    &quot;weight&quot;: 3900,
+    &quot;pais&quot;: &quot;germany&quot;,
+    &quot;hpPor1000lb&quot;: 129.0
+  },
+  {
+    &quot;descr&quot;: &quot;audi rs 6 avant 4.0&quot;,
+    &quot;horsepower&quot;: 591,
+    &quot;weight&quot;: 4600,
+    &quot;pais&quot;: &quot;germany&quot;,
+    &quot;hpPor1000lb&quot;: 128.5
+  },
+  {
+    &quot;descr&quot;: &quot;chevrolet camaro ss 6.2&quot;,
+    &quot;horsepower&quot;: 455,
+    &quot;weight&quot;: 3685,
+    &quot;pais&quot;: &quot;usa&quot;,
+    &quot;hpPor1000lb&quot;: 123.5
+  },
+  {
+    &quot;descr&quot;: &quot;ford mustang gt 5.0&quot;,
+    &quot;horsepower&quot;: 480,
+    &quot;weight&quot;: 3900,
+    &quot;pais&quot;: &quot;usa&quot;,
+    &quot;hpPor1000lb&quot;: 123.1
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 22: Modelos con nombre distinto al fabricante</h3>
+<p>Para cada fabricante, mostrar solo los modelos cuyo nombre es distinto al del fabricante; descartar fabricantes sin ninguno.</p>
+<p>Colección: <code>makers</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;fabricante&quot;: &quot;$name&quot;,
+      &quot;modelos&quot;: {
+        &quot;$filter&quot;: {
+          &quot;input&quot;: &quot;$models&quot;,
+          &quot;as&quot;: &quot;m&quot;,
+          &quot;cond&quot;: {
+            &quot;$ne&quot;: [
+              &quot;$$m.name&quot;,
+              &quot;$name&quot;
+            ]
+          }
+        }
+      }
+    }
+  },
+  {
+    &quot;$match&quot;: {
+      &quot;$expr&quot;: {
+        &quot;$gt&quot;: [
+          {
+            &quot;$size&quot;: &quot;$modelos&quot;
+          },
+          0
+        ]
+      }
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;fabricante&quot;: 1,
+      &quot;modelos&quot;: &quot;$modelos.name&quot;
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;fabricante&quot;: 1
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (12 documentos)</p>
+<pre>[
+  {
+    &quot;fabricante&quot;: &quot;bmw&quot;,
+    &quot;modelos&quot;: [
+      &quot;mini&quot;
+    ]
+  },
+  {
+    &quot;fabricante&quot;: &quot;ford&quot;,
+    &quot;modelos&quot;: [
+      &quot;lincoln&quot;
+    ]
+  },
+  {
+    &quot;fabricante&quot;: &quot;gm&quot;,
+    &quot;modelos&quot;: [
+      &quot;chevrolet&quot;,
+      &quot;gmc&quot;,
+      &quot;cadillac&quot;,
+      &quot;buick&quot;
+    ]
+  },
+  {
+    &quot;fabricante&quot;: &quot;honda&quot;,
+    &quot;modelos&quot;: [
+      &quot;acura&quot;
+    ]
+  },
+  {
+    &quot;fabricante&quot;: &quot;hyundai&quot;,
+    &quot;modelos&quot;: [
+      &quot;kia&quot;,
+      &quot;genesis&quot;
+    ]
+  },
+  {
+    &quot;fabricante&quot;: &quot;jlr&quot;,
+    &quot;modelos&quot;: [
+      &quot;land rover&quot;,
+      &quot;jaguar&quot;
+    ]
+  },
+  {
+    &quot;fabricante&quot;: &quot;nissan&quot;,
+    &quot;modelos&quot;: [
+      &quot;infiniti&quot;
+    ]
+  },
+  {
+    &quot;fabricante&quot;: &quot;renault&quot;,
+    &quot;modelos&quot;: [
+      &quot;dacia&quot;
+    ]
+  },
+  {
+    &quot;fabricante&quot;: &quot;saic&quot;,
+    &quot;modelos&quot;: [
+      &quot;mg&quot;
+    ]
+  },
+  {
+    &quot;fabricante&quot;: &quot;stellantis&quot;,
+    &quot;modelos&quot;: [
+      &quot;jeep&quot;,
+      &quot;dodge&quot;,
+      &quot;ram&quot;,
+      &quot;chrysler&quot;,
+      &quot;fiat&quot;,
+      &quot;peugeot&quot;,
+      &quot;alfa romeo&quot;
+    ]
+  },
+  {
+    &quot;fabricante&quot;: &quot;toyota&quot;,
+    &quot;modelos&quot;: [
+      &quot;lexus&quot;
+    ]
+  },
+  {
+    &quot;fabricante&quot;: &quot;volkswagen&quot;,
+    &quot;modelos&quot;: [
+      &quot;audi&quot;,
+      &quot;porsche&quot;,
+      &quot;lamborghini&quot;,
+      &quot;bentley&quot;
+    ]
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 23: Facet: continente, cilindros y stats mpg</h3>
+<p>En una sola consulta: (a) autos por continente, (b) autos por cilindros, (c) min/max/avg globales de mpg.</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$facet&quot;: {
+      &quot;porContinente&quot;: [
+        {
+          &quot;$group&quot;: {
+            &quot;_id&quot;: &quot;$continent.name&quot;,
+            &quot;numAutos&quot;: {
+              &quot;$sum&quot;: 1
+            }
+          }
+        },
+        {
+          &quot;$sort&quot;: {
+            &quot;numAutos&quot;: -1
+          }
+        },
+        {
+          &quot;$project&quot;: {
+            &quot;_id&quot;: 0,
+            &quot;continente&quot;: &quot;$_id&quot;,
+            &quot;numAutos&quot;: 1
+          }
+        }
+      ],
+      &quot;porCilindros&quot;: [
+        {
+          &quot;$group&quot;: {
+            &quot;_id&quot;: &quot;$cylinders&quot;,
+            &quot;numAutos&quot;: {
+              &quot;$sum&quot;: 1
+            }
+          }
+        },
+        {
+          &quot;$sort&quot;: {
+            &quot;_id&quot;: 1
+          }
+        },
+        {
+          &quot;$project&quot;: {
+            &quot;_id&quot;: 0,
+            &quot;cylinders&quot;: &quot;$_id&quot;,
+            &quot;numAutos&quot;: 1
+          }
+        }
+      ],
+      &quot;statsMpg&quot;: [
+        {
+          &quot;$group&quot;: {
+            &quot;_id&quot;: null,
+            &quot;min&quot;: {
+              &quot;$min&quot;: &quot;$mpg&quot;
+            },
+            &quot;max&quot;: {
+              &quot;$max&quot;: &quot;$mpg&quot;
+            },
+            &quot;avg&quot;: {
+              &quot;$avg&quot;: &quot;$mpg&quot;
+            }
+          }
+        },
+        {
+          &quot;$project&quot;: {
+            &quot;_id&quot;: 0,
+            &quot;min&quot;: 1,
+            &quot;max&quot;: 1,
+            &quot;avg&quot;: {
+              &quot;$round&quot;: [
+                &quot;$avg&quot;,
+                1
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (1 documentos)</p>
+<pre>[
+  {
+    &quot;porContinente&quot;: [
+      {
+        &quot;numAutos&quot;: 63,
+        &quot;continente&quot;: &quot;asia&quot;
+      },
+      {
+        &quot;numAutos&quot;: 47,
+        &quot;continente&quot;: &quot;europe&quot;
+      },
+      {
+        &quot;numAutos&quot;: 28,
+        &quot;continente&quot;: &quot;america&quot;
+      }
+    ],
+    &quot;porCilindros&quot;: [
+      {
+        &quot;numAutos&quot;: 9,
+        &quot;cylinders&quot;: 3
+      },
+      {
+        &quot;numAutos&quot;: 83,
+        &quot;cylinders&quot;: 4
+      },
+      {
+        &quot;numAutos&quot;: 29,
+        &quot;cylinders&quot;: 6
+      },
+      {
+        &quot;numAutos&quot;: 16,
+        &quot;cylinders&quot;: 8
+      },
+      {
+        &quot;numAutos&quot;: 1,
+        &quot;cylinders&quot;: 12
+      }
+    ],
+    &quot;statsMpg&quot;: [
+      {
+        &quot;min&quot;: 14,
+        &quot;max&quot;: 51,
+        &quot;avg&quot;: 26.0
+      }
+    ]
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 24: Ranking potencia autos alemanes (top 5)</h3>
+<p>Asignar a cada auto alemán su posición por potencia dentro de su país y mostrar los 5 primeros.</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$match&quot;: {
+      &quot;country.name&quot;: &quot;germany&quot;
+    }
+  },
+  {
+    &quot;$setWindowFields&quot;: {
+      &quot;partitionBy&quot;: &quot;$country.name&quot;,
+      &quot;sortBy&quot;: {
+        &quot;horsepower&quot;: -1
+      },
+      &quot;output&quot;: {
+        &quot;posicion&quot;: {
+          &quot;$rank&quot;: {}
+        }
+      }
+    }
+  },
+  {
+    &quot;$match&quot;: {
+      &quot;posicion&quot;: {
+        &quot;$lte&quot;: 5
+      }
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;posicion&quot;: 1,
+      &quot;descr&quot;: 1,
+      &quot;horsepower&quot;: 1,
+      &quot;pais&quot;: &quot;$country.name&quot;
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;posicion&quot;: 1
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (5 documentos)</p>
+<pre>[
+  {
+    &quot;descr&quot;: &quot;audi rs 6 avant 4.0&quot;,
+    &quot;horsepower&quot;: 591,
+    &quot;posicion&quot;: 1,
+    &quot;pais&quot;: &quot;germany&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;mercedes-benz amg g 63 4.0&quot;,
+    &quot;horsepower&quot;: 577,
+    &quot;posicion&quot;: 2,
+    &quot;pais&quot;: &quot;germany&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;bmw m3 competition 3.0&quot;,
+    &quot;horsepower&quot;: 503,
+    &quot;posicion&quot;: 3,
+    &quot;pais&quot;: &quot;germany&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;porsche 911 carrera 3.0&quot;,
+    &quot;horsepower&quot;: 379,
+    &quot;posicion&quot;: 4,
+    &quot;pais&quot;: &quot;germany&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;bmw x5 xdrive40i 3.0&quot;,
+    &quot;horsepower&quot;: 375,
+    &quot;posicion&quot;: 5,
+    &quot;pais&quot;: &quot;germany&quot;
+  }
+]</pre>
+</div>
+<div class='query'>
+<h3>Consulta 25: Auto más eficiente por fabricante europeo</h3>
+<p>Para cada fabricante europeo, su auto más eficiente (mayor mpg).</p>
+<p>Colección: <code>cars</code></p>
+<p><strong>Pipeline</strong></p>
+<pre>[
+  {
+    &quot;$match&quot;: {
+      &quot;continent.name&quot;: &quot;europe&quot;
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;maker.name&quot;: 1,
+      &quot;mpg&quot;: -1
+    }
+  },
+  {
+    &quot;$group&quot;: {
+      &quot;_id&quot;: &quot;$maker.name&quot;,
+      &quot;descr&quot;: {
+        &quot;$first&quot;: &quot;$descr&quot;
+      },
+      &quot;mpg&quot;: {
+        &quot;$first&quot;: &quot;$mpg&quot;
+      },
+      &quot;fullName&quot;: {
+        &quot;$first&quot;: &quot;$maker.fullName&quot;
+      }
+    }
+  },
+  {
+    &quot;$project&quot;: {
+      &quot;_id&quot;: 0,
+      &quot;fabricante&quot;: &quot;$_id&quot;,
+      &quot;fullName&quot;: 1,
+      &quot;descr&quot;: 1,
+      &quot;mpg&quot;: 1
+    }
+  },
+  {
+    &quot;$sort&quot;: {
+      &quot;fabricante&quot;: 1
+    }
+  }
+]</pre>
+<p><strong>Resultado</strong> (8 documentos)</p>
+<pre>[
+  {
+    &quot;descr&quot;: &quot;mini cooper s 2.0t&quot;,
+    &quot;mpg&quot;: 31,
+    &quot;fullName&quot;: &quot;BMW Group&quot;,
+    &quot;fabricante&quot;: &quot;bmw&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;ferrari roma 3.9&quot;,
+    &quot;mpg&quot;: 17,
+    &quot;fullName&quot;: &quot;Ferrari N.V.&quot;,
+    &quot;fabricante&quot;: &quot;ferrari&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;jaguar f-pace p250 2.0t&quot;,
+    &quot;mpg&quot;: 24,
+    &quot;fullName&quot;: &quot;Jaguar Land Rover&quot;,
+    &quot;fabricante&quot;: &quot;jlr&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;mercedes-benz c 300 2.0t&quot;,
+    &quot;mpg&quot;: 29,
+    &quot;fullName&quot;: &quot;Mercedes-Benz Group&quot;,
+    &quot;fabricante&quot;: &quot;mercedes-benz&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;renault kardian 1.0t&quot;,
+    &quot;mpg&quot;: 40,
+    &quot;fullName&quot;: &quot;Renault Group&quot;,
+    &quot;fabricante&quot;: &quot;renault&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;peugeot 2008 gt 1.2t&quot;,
+    &quot;mpg&quot;: 40,
+    &quot;fullName&quot;: &quot;Stellantis N.V.&quot;,
+    &quot;fabricante&quot;: &quot;stellantis&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;volkswagen jetta se 1.5t&quot;,
+    &quot;mpg&quot;: 35,
+    &quot;fullName&quot;: &quot;Volkswagen Group&quot;,
+    &quot;fabricante&quot;: &quot;volkswagen&quot;
+  },
+  {
+    &quot;descr&quot;: &quot;volvo s60 b5 2.0t&quot;,
+    &quot;mpg&quot;: 28,
+    &quot;fullName&quot;: &quot;Volvo Cars&quot;,
+    &quot;fabricante&quot;: &quot;volvo&quot;
+  }
+]</pre>
+</div>
+<h2>5. Aplicación Python</h2>
+<p>Menú CLI en <code>app/main.py</code>. Ver <code>docs/03_aplicacion_python.md</code>.</p><pre>.venv/bin/python app/main.py
+.venv/bin/python app/main.py 1
+.venv/bin/python app/main.py all</pre>
+<h2>6. Bitácora de decisiones</h2>
+<p>Documentación incremental en <code>docs/</code> (00_bitacora, 01_modelo, 02_consultas, 03_app, 04_entrega).</p>
+</body>
+</html>
